@@ -1,75 +1,30 @@
 import streamlit as st
 import qrcode
 import uuid
-import os
 from io import BytesIO
-import base64
-import re
-from PyPDF2 import PdfReader
-import docx
-
-# ------------------------
-# Function to extract text from PDF
-# ------------------------
-def extract_text_from_pdf(file):
-    pdf_reader = PdfReader(file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text() + "\n"
-    return text
-
-# ------------------------
-# Function to extract text from DOCX
-# ------------------------
-def extract_text_from_docx(file):
-    doc = docx.Document(file)
-    text = "\n".join([para.text for para in doc.paragraphs])
-    return text
-
-# ------------------------
-# Function to auto extract details
-# ------------------------
-def extract_details(text):
-    details = {"Name": "Not Found", "Email": "Not Found", "Phone": "Not Found"}
-    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}"
-    phone_pattern = r"\+?\d[\d\s-]{8,15}"
-
-    email = re.search(email_pattern, text)
-    phone = re.search(phone_pattern, text)
-
-    if email:
-        details["Email"] = email.group()
-    if phone:
-        details["Phone"] = phone.group()
-
-    first_line = text.split("\n")[0]
-    name_guess = " ".join(first_line.split()[:2])
-    details["Name"] = name_guess
-
-    return details
 
 # ------------------------
 # Generate QR Code
 # ------------------------
 def generate_qr(unique_id):
+    base_url = "https://walk-in.streamlit.app"  # ✅ Your deployed Streamlit app URL
+    url = f"{base_url}/?page=upload&uid={unique_id}"
+
     qr = qrcode.QRCode(box_size=10, border=4)
-    url = f"http://localhost:8501/?page=upload&uid={unique_id}"
-  # fixed &amp;
     qr.add_data(url)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
 
     buf = BytesIO()
     img.save(buf, format="PNG")
-    byte_im = buf.getvalue()
-    return byte_im, url
+    return buf.getvalue(), url
 
 # ------------------------
 # Streamlit App
 # ------------------------
+st.set_page_config(page_title="Interview Portal", layout="centered")
 st.title("Interview Portal")
 
-# ✅ Updated to use st.query_params
 query_params = st.query_params
 page = query_params.get("page", ["home"])[0]
 
@@ -81,27 +36,36 @@ if page == "home":
         if st.button("Walk-in Interview"):
             unique_id = str(uuid.uuid4())
             qr_image, qr_url = generate_qr(unique_id)
-            st.image(qr_image, caption="Scan this QR to upload CV")
-            st.write(f"Or click here: Upload CV Page")
+            st.image(qr_image, caption="Scan this QR to fill the form")
+            st.markdown(f"Or click here to fill the form", unsafe_allow_html=True)
+            st.download_button(
+                label="Download QR Code",
+                data=qr_image,
+                file_name="upload_qr.png",
+                mime="image/png"
+            )
 
     with col2:
         if st.button("Pre-Planned Interview"):
-            st.success("Pre-planned interview booking system coming soon!")
+            st.info("Pre-planned interview booking system coming soon!")
 
 elif page == "upload":
-    st.header("Upload Your CV")
+    st.header("Candidate Information Form")
     uid = query_params.get("uid", [""])[0]
-    uploaded_file = st.file_uploader("Upload CV (PDF/DOCX)", type=["pdf", "docx"])
 
-    if uploaded_file is not None:
-        if uploaded_file.name.endswith(".pdf"):
-            text = extract_text_from_pdf(uploaded_file)
+    with st.form("candidate_form"):
+        name = st.text_input("Full Name")
+        email = st.text_input("Email")
+        phone = st.text_input("Phone Number")
+        resume = st.file_uploader("Upload Resume (PDF or DOCX)", type=["pdf", "docx"])
+        submitted = st.form_submit_button("Submit")
+
+    if submitted:
+        if not name or not email or not phone or not resume:
+            st.warning("Please fill in all fields and upload your resume.")
         else:
-            text = extract_text_from_docx(uploaded_file)
-
-        details = extract_details(text)
-
-        st.subheader("Extracted Details")
-        st.write(f"**Name:** {details['Name']}")
-        st.write(f"**Email:** {details['Email']}")
-        st.write(f"**Phone:** {details['Phone']}")
+            st.success("✅ Thank you for submitting your details!")
+            st.write("We have received your information.")
+            st.write(f"**Name:** {name}")
+            st.write(f"**Email:** {email}")
+            st.write(f"**Phone:** {phone}")
