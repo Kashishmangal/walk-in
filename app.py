@@ -8,7 +8,7 @@ from io import BytesIO
 # ------------------------
 def generate_qr(unique_id):
     base_url = "https://walk-in.streamlit.app"  # ✅ Your deployed Streamlit app URL
-    url = f"{base_url}/?page=upload&uid={unique_id}"
+    url = url = f"{base_url}/?page=upload&uid={unique_id}"
 
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(url)
@@ -69,3 +69,4 @@ elif page == "upload":
             st.write(f"**Name:** {name}")
             st.write(f"**Email:** {email}")
             st.write(f"**Phone:** {phone}")
+
