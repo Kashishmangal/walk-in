@@ -1,0 +1,4 @@
+streamlit
+qrcode[pil]
+PyPDF2
+python-docx
