@@ -14,9 +14,9 @@ from io import BytesIO
 
 def generate_qr(unique_id):
 
-    base_url = "https://walk-in.streamlit.app"  # ✅ Your deployed Streamlit app URL
+    base_url = "https://walk-in.streamlit.app"  # Replace with your deployed app URL
 
-    url = f"{base_url}/?page=upload&uid={unique_id}"
+    url = f"{base_url}?page=upload&uid={unique_id}"  # ✅ direct link to form
 
     qr = qrcode.QRCode(box_size=10, border=4)
 
@@ -32,6 +32,7 @@ def generate_qr(unique_id):
 
     return buf.getvalue(), url
 
+
 # ------------------------
 
 # Streamlit App
@@ -42,53 +43,45 @@ st.set_page_config(page_title="Interview Portal", layout="centered")
 
 st.title("Interview Portal")
 
-# ✅ New stable API
+# ✅ Read query params properly
 
-query_params = st.query_params
+query_params = dict(st.query_params)
 
-page = query_params.get("page", ["home"])[0]
+page = query_params.get("page", "home")
+
+if isinstance(page, list):
+
+    page = page[0]
 
 if page == "home":
 
-    st.header("Choose Interview Type")
+    st.header("Walk-in Interview QR Generator")
 
-    col1, col2 = st.columns(2)
+    if st.button("Generate QR Code for Candidate Form"):
 
-    with col1:
+        unique_id = str(uuid.uuid4())
 
-        if st.button("Walk-in Interview"):
+        qr_image, qr_url = generate_qr(unique_id)
 
-            unique_id = str(uuid.uuid4())
+        st.image(qr_image, caption="Scan this QR to fill the candidate form")
 
-            qr_image, qr_url = generate_qr(unique_id)
+        st.markdown(f'<a href="{qr_url}" target="_blank">👉 Or click here to fill the form</a>', unsafe_allow_html=True)
 
-            st.image(qr_image, caption="Scan this QR to fill the form")
+        st.download_button(
 
-            st.markdown(f'<a href="{qr_url}" target="_blank">Or click here to fill the form</a>', unsafe_allow_html=True)
+            label="Download QR Code",
 
-            st.download_button(
+            data=qr_image,
 
-                label="Download QR Code",
+            file_name="candidate_form_qr.png",
 
-                data=qr_image,
+            mime="image/png"
 
-                file_name="upload_qr.png",
-
-                mime="image/png"
-
-            )
-
-    with col2:
-
-        if st.button("Pre-Planned Interview"):
-
-            st.info("Pre-planned interview booking system coming soon!")
+        )
 
 elif page == "upload":
 
     st.header("Candidate Information Form")
-
-    uid = query_params.get("uid", [""])[0]
 
     with st.form("candidate_form"):
 
@@ -112,7 +105,7 @@ elif page == "upload":
 
             st.success("✅ Thank you for submitting your details!")
 
-            st.write("We have received your information.")
+            st.write("We have received your information:")
 
             st.write(f"**Name:** {name}")
 
